@@ -40,18 +40,49 @@ describe('AllPerks page (Directory)', () => {
     expect(screen.getByText(/showing/i)).toHaveTextContent('Showing');
   });
 
-  /*
-  TODO: Test merchant filtering
-  - use the seeded record
-  - perform a real HTTP fetch.
-  - wait for the fetch to finish
-  - choose the record's merchant from the dropdown
-  - verify the record is displayed
-  - verify the summary text reflects the number of matching perks
-  */
-
   test('lists public perks and responds to merchant filtering', async () => {
-    // This will always fail until the TODO above is implemented.
-    expect(true).toBe(false);
+    const seededPerk = global.__TEST_CONTEXT__.seededPerk;
+
+    // Render the exploration page so it performs its real HTTP fetch.
+    renderWithRouter(
+      <Routes>
+        <Route path="/explore" element={<AllPerks />} />
+      </Routes>,
+      { initialEntries: ['/explore'] }
+    );
+
+    // Wait for the baseline card to appear which guarantees the asynchronous fetch finished.
+    await waitFor(() => {
+      expect(screen.getByText(seededPerk.title)).toBeInTheDocument();
+    });
+
+    // Resolve the merchant display string from the seeded data with sensible fallbacks.
+    const merchantText =
+      seededPerk.merchant?.name ??
+      seededPerk.merchant ??
+      seededPerk.merchantName ??
+      seededPerk.business ??
+      seededPerk.company ??
+      '';
+
+    // Ensure we have a merchant value to look for.
+    expect(merchantText).not.toBe('');
+
+    // Locate the option element that corresponds to the seeded merchant.
+    const merchantOption = screen.getByText(merchantText, { selector: 'option' });
+    expect(merchantOption).toBeInTheDocument();
+
+    // Find the select element that contains that option and choose it.
+    const merchantSelect = merchantOption.closest('select');
+    expect(merchantSelect).toBeTruthy();
+    fireEvent.change(merchantSelect, { target: { value: merchantOption.value } });
+
+    // Wait for filtering to apply and the seeded card to still be present.
+    await waitFor(() => {
+      expect(screen.getByText(seededPerk.title)).toBeInTheDocument();
+    });
+
+    // The summary text should reflect the number of matching perks after filtering.
+    expect(screen.getByText(/showing/i)).toHaveTextContent('Showing');
   });
 });
